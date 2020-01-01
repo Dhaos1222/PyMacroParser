@@ -175,7 +175,6 @@ def cpreprocess_evaluate_ifdef(state, arg):
 
 def handle_cpreprocess_cmd(state, cmd, arg):
 
-    cmd = cmd.lstrip()
     if cmd == "ifdef":
         state._preprocessIfLevels += [0]
         # 检验
