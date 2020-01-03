@@ -32,7 +32,7 @@
 #define quote '"'
 #define long_intn 4293955295L  
 #define MC_TEST 
-#define COMPDATA  { {{1,3}, {2,3,5}, {31} },  {{12,016}, {1,30,0}}, 23 }
+#define COMPDATA  { {1,3, {2,3,5}, {31} },  {{12,016}, {1,30,0}}, 23 }
 #define c_vtab '\v'
 #define _wide_str L"This is a string literal."
 #define NS1 "with tab	"    

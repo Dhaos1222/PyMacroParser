@@ -31,6 +31,7 @@ def cdata_parser_in_python(data):
     aggregate_all = []
     last_char = ""
     str_type = ""
+    # need_tuple = False
     for c in data:
         if state == 0:
             if c in SpaceChars: ret += c
@@ -57,7 +58,11 @@ def cdata_parser_in_python(data):
                 lbracket = 1
                 ret_list = {}
                 ret_list[lbracket] = ""
+                arg_list = {}
+                arg_list[lbracket] = []
                 state = 8
+            # elif c == "(":
+            #     # tuple
             else: ret += c
         elif state == 1: # boolean or wchar
             if c == '"':
@@ -120,13 +125,21 @@ def cdata_parser_in_python(data):
             if c == ",":
                 if ret_list[lbracket] == '':
                     continue
-                elif ret_list[lbracket][0] == "{":
-                    ret_list[lbracket] += c
+                # elif ret_list[lbracket][0] == "{":
+                #     ret_list[lbracket] += c
+                #     continue
+                elif last_char == "}":
+                    # 在同一层中不用再次翻译插入
+                    ret_list[lbracket] = ""
                     continue
 
                 ret = ret_list[lbracket]
                 val = cdata_parser_in_python(ret)
-                aggregate_list.append(val)
+                cur_list = arg_list[lbracket]
+                cur_list.append(val)
+                print("0")
+                print(cur_list)
+                # aggregate_list.append(val)
                 ret_list[lbracket] = ""
 
             elif c == "}":
@@ -137,11 +150,27 @@ def cdata_parser_in_python(data):
                 print("=============")
                 print("1")
                 print(data)
-                print("ret = " + ret)
-                val = cdata_parser_in_python(ret)
+                print("ret = '" + ret + "'")
+                tmp = arg_list[lbracket]
+                if ret == "":
+                    print("hhhh")
+                    print(arg_list[lbracket])
+                else:
+                    val = cdata_parser_in_python(ret)
+                    tmp.append(val)
+                    
+                print(tmp)
+                val = tmp
+                print(val)
+
                 print("2")
                 print(val)
-                aggregate_list.append(val)
+                if lbracket == 1:
+                    aggregate_list.append(val)
+                else:
+                    if type(val) == list:
+                        val = tuple(val)
+                    arg_list[lbracket-1].append(val)
                 print(aggregate_list)
                 # print(aggregate_all)
                 ret_list[lbracket] = ""
@@ -154,7 +183,10 @@ def cdata_parser_in_python(data):
                     # aggregate_list = []
                     state = 81
                 else:
-                    # ret_list[lbracket] += str(val)
+                    # print("4")
+                    # print(ret_list[lbracket])
+                    # # ret_list[lbracket] += str(val)
+                    # print(ret_list[lbracket])
                     # aggregate_all.append(aggregate_list)
                     # aggregate_list = []
                     pass
@@ -163,7 +195,14 @@ def cdata_parser_in_python(data):
                 lbracket += 1
                 if not ret_list.__contains__(lbracket):
                     ret_list[lbracket] = ""
-                ret_list[lbracket] += c
+                if not arg_list.__contains__(lbracket):
+                    arg_list[lbracket] = []
+                else:
+                    # tmp = arg_list[lbracket]
+                    arg_list[lbracket] = []
+                    # arg_list[lbracket].append(tmp)
+                    # need_tuple = True
+                # ret_list[lbracket] += c
                 
 
                 # ret += c
@@ -242,10 +281,13 @@ def cdata_parser_in_python(data):
         ret = float(ret)
     # 聚合
     elif state == 81:
-        aggregate_all.append(aggregate_list)
+        # aggregate_all.append(aggregate_list)
+            
+        aggregate_all = aggregate_list
         print("=======================")
         print("3")
         print(data)
+        print(aggregate_list)
         print(aggregate_all)
         ret = []
         if len(aggregate_all) == 1:

@@ -77,7 +77,7 @@ comment */#define _1X 32.0
 #define _X 0100 //0ctal /* Constants
 #define _Y -0124
 
-#define COMPDATA  { {{1,3}, {2,3,5}, {31} },  {{12,016}, {1,30,0}}, 23 }
+#define COMPDATA  { {1,3, {2,3,5}, {31} },  {{12,016}, {1,30,0}}, 23 }
 
 
 #else
