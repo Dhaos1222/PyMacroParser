@@ -24,7 +24,7 @@ def simple_escape_char(c):
 
 def cdata_parser_in_python(data):
     if data is None: return None
-    data = data.lstrip(" \t")
+    data = data.strip(" \t")
     ret = ""
     state = 0
     aggregate_list = []
@@ -38,13 +38,26 @@ def cdata_parser_in_python(data):
                 ret += c
                 state = 1
             elif c in NumberChars:
-                state = 2
+                if c == "0":
+                    state = 22 #octal or hex
+                else:
+                    state = 2
+                ret += c
+            elif c == ".":
+                state = 7
                 ret += c
             elif c == '"':
                 state = 4
                 # ret += c
-            elif c == "'": state = 6
-            elif c == "{": state = 8
+            elif c == "'":
+                ret += c
+                state = 6
+            elif c == "{":
+                # start of aggregation 
+                lbracket = 1
+                ret_list = {}
+                ret_list[lbracket] = ""
+                state = 8
             else: ret += c
         elif state == 1: # boolean or wchar
             if c == '"':
@@ -55,15 +68,25 @@ def cdata_parser_in_python(data):
         elif state == 2: # number
             ret += c
             if c in NumberChars: pass
-            elif c == "x": state = 3
+            elif c in "xX": state = 3
             elif c == ".": state = 7
-            elif c == "e": state = 7
+            elif c in "Ee": state = 7
+            elif c in "Uu": 
+                ret = ret[0:-1]
+            elif c in "Ll":
+                state = 9
             elif c in LetterChars + "_" + SpaceChars: pass # even if invalid, stay in this state
             else:
                 state = 0
+        elif state == 22: #octal or hex
+            ret += c
+            if c in NumberChars + SpaceChars: pass
+            elif c in "xX": state = 3
+            else: 
+                state = 0
         elif state == 3: # hex number
             ret += c
-            if c in NumberChars + LetterChars + "_": pass # also ignore invalids
+            if c in NumberChars + LetterChars + SpaceChars: pass # also ignore invalids
             else: 
                 state = 0
         elif state == 4: # str
@@ -77,31 +100,107 @@ def cdata_parser_in_python(data):
             state = 4
             ret += simple_escape_char(c)
         elif state == 6: # char
-            ret = ord(c)
-            state = 0
+            ret += c
+            if c == "\\":
+                state = 61
+            elif c == "'":
+                ret = ret[1:-1]
+                ret = ret.decode("string_escape")
+                ret = ord(ret)
+                state = 0
+            else:
+                pass
+        elif state == 61:
+            ret += c
+            state = 6
         elif state == 7: #float
             ret += c
             if c in NumberChars: pass
         elif state == 8: #aggregation
             if c == ",":
+                if ret_list[lbracket] == '':
+                    continue
+                elif ret_list[lbracket][0] == "{":
+                    ret_list[lbracket] += c
+                    continue
+
+                ret = ret_list[lbracket]
                 val = cdata_parser_in_python(ret)
                 aggregate_list.append(val)
-                ret = ""
-            elif c == "}": 
+                ret_list[lbracket] = ""
+
+            elif c == "}":
+                if ret_list[lbracket] and ret_list[lbracket][0] == "{":
+                    ret_list[lbracket] += c
+
+                ret = ret_list[lbracket]
+                print("=============")
+                print("1")
+                print(data)
+                print("ret = " + ret)
                 val = cdata_parser_in_python(ret)
+                print("2")
+                print(val)
                 aggregate_list.append(val)
-                aggregate_all.append(aggregate_list)
-                aggregate_list = []
-                ret = ""
-                state = 81
-            elif c in SpaceChars + "{": pass
+                print(aggregate_list)
+                # print(aggregate_all)
+                ret_list[lbracket] = ""
+
+                lbracket -= 1
+                # aggregate_all.append(aggregate_list)
+                # print(aggregate_all)
+                # aggregate_list = []
+                if lbracket == 0:
+                    # aggregate_list = []
+                    state = 81
+                else:
+                    # ret_list[lbracket] += str(val)
+                    # aggregate_all.append(aggregate_list)
+                    # aggregate_list = []
+                    pass
+            elif c in SpaceChars: pass
+            elif c == "{":
+                lbracket += 1
+                if not ret_list.__contains__(lbracket):
+                    ret_list[lbracket] = ""
+                ret_list[lbracket] += c
+                
+
+                # ret += c
+                # if aggregate_list != []:
+                    # aggregate_all.append(aggregate_list)
+                # print(aggregate_list)
+                # print(aggregate_all)
+                # aggregate_list = []
+            elif c == '"':
+                ret_list[lbracket] += c
+                state = 82
+            elif c == "'":
+                ret_list[lbracket] += c
+                state = 83
+            # elif c == "(":
+            #     ret += c
+            #     state = 84
             else:
-                ret += c
+                ret_list[lbracket] += c
 
             # last_char = c
         elif state == 81:
             if c == "{":
                 state = 8
+        elif state == 82:
+            ret_list[lbracket] += c
+            if c == '"':
+                state = 8
+        elif state == 83:
+            ret_list[lbracket] += c
+            if c == "'":
+                state = 8
+        elif state == 84:
+            # have finished tuple
+            ret += c
+            # if c == ")":
+                # state = 8
         else:
             state = 0  # recover
         last_char = c
@@ -115,7 +214,14 @@ def cdata_parser_in_python(data):
         ret = int(ret)
     # 计算最后的16进制数
     elif state == 3:
+        ret = ret.rstrip("lL")
         ret = int(ret, 16)
+    elif state == 22:
+        ret = ret.rstrip("lL")
+        ret = int(ret, 8)
+    # long型值转换
+    elif state == 9:
+        ret = long(ret)
     # 字符串处理
     elif state == 41:
         # print(str_type)
@@ -131,12 +237,16 @@ def cdata_parser_in_python(data):
 
     # 浮点数  
     elif state == 7:
-        ret = ret.rstrip()
-        ret = ret.rstrip("fF")
+        ret = ret.strip()
+        ret = ret.rstrip("fFlL")
         ret = float(ret)
     # 聚合
     elif state == 81:
-        # print(aggregate_all)
+        aggregate_all.append(aggregate_list)
+        print("=======================")
+        print("3")
+        print(data)
+        print(aggregate_all)
         ret = []
         if len(aggregate_all) == 1:
             aggregate_all = aggregate_all[0]
@@ -145,8 +255,12 @@ def cdata_parser_in_python(data):
             for v in aggregate_all:
                 one = tuple(v)
                 ret.append(one)
-            ret = tuple(ret)
-
+                # ret += v
+        print(ret)
+        ret = tuple(ret)
+        # print(ret)
+        print(ret)
+        print("========================")
     return ret
                 
 
@@ -224,6 +338,7 @@ def handle_cpreprocess_cmd(state, cmd, arg):
 
 # 定义新的宏
 def cpreprocess_handle_def(stateStruct, arg):
+    # print("arg = %s" % arg)
     state = 0
     macroname = ""
     args = None
@@ -277,9 +392,10 @@ def macro_parse(stateStruct, line):
     cmd = ""
     # 字符串
     arg = ""
-
+    last_char = ""
     state = 0
     statebeforecomment = None
+    have_comment = False
     for c in line:
         breakLoop = False
         while not breakLoop:
@@ -302,14 +418,35 @@ def macro_parse(stateStruct, line):
             elif state == 1:
                 # if c in SpaceChars: pass
                 if c == "\n":state = 0
+                elif c in SpaceChars: pass
+                elif c == "/":
+                    statebeforecomment = 1
+                    state = 20
                 else:
                     cmd = c
                     state = 2
+
+                have_comment = False
             # 正在读入指令
             elif state == 2:
-                if c in SpaceChars:
+                if have_comment:
                     if arg is None: arg = ""
-                    else: 
+                    else:
+                        if have_comment:
+                            arg += " "
+                            have_comment = False
+                if c in SpaceChars:
+                    # 避免出现 #define/*注释*/宏名 变量名 这种情况
+                    if arg is None: arg = ""
+                    else:
+                        if c == '\n':
+                            handle_cpreprocess_cmd(stateStruct, cmd, arg)
+                            state = 0
+                        # if have_comment:
+                        #     arg += " "
+                        #     have_comment = False
+                        #     print('"'+arg+'"')
+                        #     print("=========")
                         if arg != "":
                             arg += c
                 # 字符串
@@ -328,7 +465,7 @@ def macro_parse(stateStruct, line):
                 elif c == "\\": state = 5
                 elif c == "\n":
                     # print("cmd = %s, arg = %s" % (cmd, arg) )
-                    # cmd = ""
+                    # cmd = cmd.strip()
                     # arg = None
                     handle_cpreprocess_cmd(stateStruct, cmd, arg)
                     state = 0
@@ -393,9 +530,11 @@ def macro_parse(stateStruct, line):
                 if c == "*": state = 22
                 else: pass
             elif state == 22:
+                # print(arg)
                 if c == "/":
                     state = statebeforecomment
                     statebeforecomment = None
+                    have_comment = True
                 elif c == "*": pass
                 else: state = 21
             elif state == 25:
@@ -407,6 +546,11 @@ def macro_parse(stateStruct, line):
             else:
                 print("Erro invalid state")
                 state = 0
+
+            last_char = c
+            
+    if last_char != "\n":
+        handle_cpreprocess_cmd(stateStruct, cmd, arg)
 
 
 class Macro(object):
@@ -421,14 +565,17 @@ class Macro(object):
         # print(self.name)
         # print(self.rightside if(self.rightside) else None)
         value = self.rightside if(self.rightside) else None
+        # print("===========")
         # print(value)
-        value = cdata_parser_in_python(value)
+        # value = cdata_parser_in_python(value)
+        # print(value)
+        # print("===========")
         if value is None:
             value = ""
         elif type(value) == tuple:
             value = self.rightside
-        elif type(value) == str:
-            value = '"' + value + '"'
+        # elif type(value) == str:
+        #     value = '"' + value + '"'
         elif type(value) == unicode:
             value = 'L"' + value + '"'
         elif type(value) == bool:
@@ -436,6 +583,7 @@ class Macro(object):
                 value = "true"
             else:
                 value = "false"
+        # print(value)
         return "#define " + self.name + " " + str(value)
 
     def eval(self):
@@ -495,11 +643,10 @@ class PyMacroParser:
             v = self.macros[k]
             key, val = v.eval()
             dump_dict[key] = val
-            if key == "TRACE_REFS":
-                print("haved trace_refs")    
             # print(key)
             # print(type(val))
             # print(val)
+        print(dump_dict)
         return dump_dict
 
 
@@ -507,6 +654,16 @@ class PyMacroParser:
         with open(f, "w") as f:
             for k in self.macros:
                 v = self.macros[k]
-                # print(v.dump())
                 f.write(v.dump())
                 f.write("\n")
+
+a1 = PyMacroParser()
+# a2 = PyMacroParser()
+a1.load("a.cpp")
+filename = "b.cpp"
+a1.dump(filename) #没有预定义宏的情况下，dump cpp
+# a2.load(filename)
+# a2.dumpDict()
+a1.preDefine("MC1;MC2") #指定预定义宏，再dump
+a1.dumpDict()
+a1.dump("c.cpp")
