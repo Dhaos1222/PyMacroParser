@@ -7,6 +7,9 @@ NumberChars = "0123456789"
 
 def simple_escape_char(c):
     if c == "n": return "\n"
+    elif c == "v": return "\v"
+    # elif c == "\x0b": return "\x0b"
+    # elif c == "\x0c": return "\x0c"
     elif c == "t": return "\t"
     elif c == "a": return "\a"
     elif c == "b": return "\b"
@@ -96,14 +99,21 @@ def cdata_parser_in_python(data):
                 state = 0
         elif state == 4: # str
             ret += c
-            if c == "\\": state = 5
+            if c == "\\": 
+                ret = ret[0:-1]
+                state = 5
             elif c == '"': 
                 state = 41
                 ret = ret[0:-1]
             else: pass
         elif state == 5: # escape in str
             state = 4
+            print("--------5--------")
+            print(ret)
             ret += simple_escape_char(c)
+            print(c)
+            print(ret)
+            # ret += c
         elif state == 6: # char
             ret += c
             if c == "\\":
@@ -134,7 +144,18 @@ def cdata_parser_in_python(data):
                     continue
 
                 ret = ret_list[lbracket]
+                print("*******************")
+                print(data)
+                print(ret)
                 val = cdata_parser_in_python(ret)
+                print(val)
+                # if type(val) == str:
+                #     print("pre")
+                #     val = val.decode("string_escape")
+                #     tmp = []
+                #     tmp.append(val)
+
+                #     print(tmp)
                 cur_list = arg_list[lbracket]
                 cur_list.append(val)
                 print("0")
@@ -153,12 +174,25 @@ def cdata_parser_in_python(data):
                 print("ret = '" + ret + "'")
                 tmp = arg_list[lbracket]
                 if ret == "":
-                    print("hhhh")
                     print(arg_list[lbracket])
                 else:
+                    print("-----------------")
+                    print(ret)
+                    ttttmp = []
+                    ttttmp.append(ret)
+                    print(ttttmp)
+                    # ret = ret.decode("string_escape")
                     val = cdata_parser_in_python(ret)
-                    tmp.append(val)
                     
+                    print(val)
+                    print(type(val))
+                    # if type(val) == str:
+                    #     print("pre")
+                    #     val = val.decode("string_escape")
+                    #     print("now")
+                    print(val)
+                    tmp.append(val)
+
                 print(tmp)
                 val = tmp
                 print(val)
@@ -190,7 +224,6 @@ def cdata_parser_in_python(data):
                     # aggregate_all.append(aggregate_list)
                     # aggregate_list = []
                     pass
-            elif c in SpaceChars: pass
             elif c == "{":
                 lbracket += 1
                 if not ret_list.__contains__(lbracket):
@@ -220,6 +253,7 @@ def cdata_parser_in_python(data):
             # elif c == "(":
             #     ret += c
             #     state = 84
+            elif c in SpaceChars: pass
             else:
                 ret_list[lbracket] += c
 
@@ -228,8 +262,13 @@ def cdata_parser_in_python(data):
             if c == "{":
                 state = 8
         elif state == 82:
+            print("----82-----")
+            print(c)
             ret_list[lbracket] += c
-            if c == '"':
+            print(ret_list[lbracket])
+            if c == "\\":
+                state = 85
+            elif c == '"':
                 state = 8
         elif state == 83:
             ret_list[lbracket] += c
@@ -240,6 +279,10 @@ def cdata_parser_in_python(data):
             ret += c
             # if c == ")":
                 # state = 8
+        elif state == 85:
+            state = 82
+            # ret_list[lbracket] += simple_escape_char(c)
+            ret_list[lbracket] += c
         else:
             state = 0  # recover
         last_char = c
@@ -632,6 +675,7 @@ class Macro(object):
         # key_and_value = {}
         value = self.rightside if(self.rightside) else None
         value = cdata_parser_in_python(value)
+
         # key_and_value[self.name] = value
         # print(key_and_value)
         return self.name, value
@@ -685,9 +729,9 @@ class PyMacroParser:
             v = self.macros[k]
             key, val = v.eval()
             dump_dict[key] = val
-            # print(key)
-            # print(type(val))
-            # print(val)
+            print(key)
+            print(type(val))
+            print(val)
         print(dump_dict)
         return dump_dict
 

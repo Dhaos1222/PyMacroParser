@@ -5,7 +5,8 @@
 #define CHARDATA  {'a', {'b'}, 23}
 // #define STRDATA  {"god", "(hi),{how are [you]?}", ",", {"inner_{1}",{"inner_{2}", "inner_{2}_(1)"}}}
 
- /*test*/ #define /*middle_1***/ COMSTRUCT /*middle_2*/ { {1, 2.0, "str"}, {'1', .0075e1f,  /*test*/ "\\\\\\\\\\\\\\\\\\//////////////////"},   /*test*/ { +0x1dCbAF, 1.2E+0,  /*""*/ "\v\'\"\f \"\n\r\t\b\a\\",},}  /*enddd*/ //end
+// /*test*/ #define /*middle_1***/ COMSTRUCT /*middle_2*/ { {1, 2.0, "str"}, {'1', .0075e1f,  /*test*/ "\\\\\\\\\\\\\\\\\\//////////////////"},   /*test*/ { +0x1dCbAF, 1.2E+0,  /*""*/ "\v\'\"\f \"\n\r\t\b\a\\",},}  /*enddd*/ //end
+#define COMSTRUCT {"\v\'\"\f \"\n\r\t\b\a\\"}
 
 #define special "'1~!@#$^&*()_+-={':[,]}|;.</>?"
   
@@ -77,7 +78,7 @@ comment */#define _1X 32.0
 #define _X 0100 //0ctal /* Constants
 #define _Y -0124
 
-#define COMPDATA  { {1,3, {2,3,5}, {31} },  {{12,016}, {1,30,0}}, 23 }
+#define COMPDATA  { {{1,3}, {2,3,5}, {31} },  {{12,016}, {1,30,0}}, 23 }
 
 
 #else
